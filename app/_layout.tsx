@@ -88,6 +88,9 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="oauth/callback" />
+            <Stack.Screen name="search-invoices" />
+            <Stack.Screen name="create-invoice" />
+            <Stack.Screen name="invoice-detail" />
           </Stack>
           <StatusBar style="auto" />
         </QueryClientProvider>

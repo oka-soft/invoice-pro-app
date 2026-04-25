@@ -119,6 +119,15 @@ export default function HomeScreen() {
           </Text>
         </View>
 
+        {/* زر البحث والتصفية */}
+        <TouchableOpacity
+          onPress={() => router.push('/(tabs)/../search-invoices' as any)}
+          className="bg-surface border border-border rounded-lg py-3 px-4 mb-4 flex-row items-center justify-center gap-2"
+        >
+          <Text className="text-primary font-semibold">🔍</Text>
+          <Text className="text-foreground font-semibold">البحث والتصفية</Text>
+        </TouchableOpacity>
+
         {/* قائمة الفواتير */}
         {loading ? (
           <View className="flex-1 items-center justify-center">
