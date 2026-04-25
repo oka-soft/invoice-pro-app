@@ -1,6 +1,6 @@
 /**
  * خدمة توليد ملفات PDF للفواتير
- * سيتم استخدام مكتبة react-native-pdf-lib أو html2pdf
+ * استخدام html2pdf.js لتوليد PDF من HTML
  */
 
 import { Invoice } from './types';
@@ -222,4 +222,42 @@ export function generateInvoiceHTML(invoice: Invoice, templateId: string): strin
   `;
 
   return html;
+}
+
+/**
+ * توليد ملف PDF من HTML (للويب فقط)
+ */
+export async function generatePDFFromHTML(html: string, fileName: string): Promise<Blob | null> {
+  try {
+    // هذه الدالة تعمل فقط على الويب
+    // على الأجهزة الحقيقية، سنستخدم طريقة مختلفة
+    if (typeof window === 'undefined') {
+      console.warn('PDF generation is not available on native platforms');
+      return null;
+    }
+
+    const element = document.createElement('div');
+    element.innerHTML = html;
+    element.style.display = 'none';
+    document.body.appendChild(element);
+
+    // استخدام html2pdf إذا كان متاحاً
+    if ((window as any).html2pdf) {
+      const pdf = (window as any).html2pdf();
+      pdf.set({
+        margin: 10,
+        filename: fileName,
+        image: { type: 'PNG', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+      });
+      pdf.from(element).save();
+    }
+
+    document.body.removeChild(element);
+    return null;
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    return null;
+  }
 }

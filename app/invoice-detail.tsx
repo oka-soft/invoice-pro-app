@@ -4,7 +4,6 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  Share,
   Platform,
 } from 'react-native';
 import { Text, View } from 'react-native';
@@ -44,15 +43,22 @@ export default function InvoiceDetailScreen() {
     }
   };
 
-  const generatePDF = async (): Promise<string> => {
-    if (!invoice) throw new Error('Invoice not found');
+  const generateInvoiceText = (): string => {
+    if (!invoice) return '';
 
-    // هنا سيتم توليد ملف PDF
-    // للآن، سنقوم بإنشاء ملف نصي كمثال
-    const fileName = `invoice_${invoice.id}.txt`;
-    const filePath = (FileSystem.documentDirectory || '') + fileName;
+    const itemsText = invoice.items
+      .map(
+        (item) =>
+          `${item.name}\nالسعر: ${formatCurrency(item.price)}\nالكمية: ${item.quantity}\nالخصم: ${item.discountType === 'percentage' ? item.discountValue + '%' : formatCurrency(item.discountValue)}\nالإجمالي: ${formatCurrency(
+            item.price * item.quantity -
+              (item.discountType === 'percentage'
+                ? (item.price * item.quantity * item.discountValue) / 100
+                : item.discountValue)
+          )}`
+      )
+      .join('\n\n');
 
-    const content = `
+    return `
 =====================================
            الفاتورة
 =====================================
@@ -78,16 +84,7 @@ ${invoice.companySettings.phone}
 -------------------------------------
 الأصناف
 -------------------------------------
-${invoice.items
-  .map(
-    (item) =>
-      `${item.name}
-السعر: ${formatCurrency(item.price)}
-الكمية: ${item.quantity}
-الخصم: ${item.discountType === 'percentage' ? item.discountValue + '%' : formatCurrency(item.discountValue)}
-الإجمالي: ${formatCurrency(item.price * item.quantity - (item.discountType === 'percentage' ? (item.price * item.quantity * item.discountValue) / 100 : item.discountValue))}`
-  )
-  .join('\n\n')}
+${itemsText}
 
 -------------------------------------
 الملخص
@@ -97,27 +94,30 @@ ${invoice.items
 الإجمالي النهائي: ${formatCurrency(invoice.total)}
 
 =====================================
+شكراً لك على تعاملك معنا
     `;
-
-    await FileSystem.writeAsStringAsync(filePath, content);
-    return filePath;
   };
 
   const handleShareWhatsApp = async () => {
     setSharing(true);
     try {
-      const filePath = await generatePDF();
-
       if (Platform.OS === 'web') {
         Alert.alert('تنبيه', 'المشاركة عبر WhatsApp غير متاحة على الويب');
+        setSharing(false);
         return;
       }
 
       if (!(await Sharing.isAvailableAsync())) {
         Alert.alert('خطأ', 'المشاركة غير متاحة على هذا الجهاز');
+        setSharing(false);
         return;
       }
 
+      const fileName = `invoice_${invoice?.id}.txt`;
+      const filePath = (FileSystem.documentDirectory || '') + fileName;
+      const content = generateInvoiceText();
+
+      await FileSystem.writeAsStringAsync(filePath, content);
       await Sharing.shareAsync(filePath, {
         mimeType: 'text/plain',
         dialogTitle: 'مشاركة الفاتورة',
@@ -192,7 +192,7 @@ ${invoice.items
           {/* الأصناف */}
           <View className="gap-3">
             <Text className="text-lg font-semibold text-foreground">الأصناف</Text>
-            {invoice.items.map((item, index) => (
+            {invoice.items.map((item) => (
               <View key={item.id} className="bg-surface border border-border rounded-lg p-4 gap-2">
                 <View className="flex-row justify-between items-start">
                   <View className="flex-1">
