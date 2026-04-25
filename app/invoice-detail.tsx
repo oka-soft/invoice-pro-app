@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ScrollView,
   TouchableOpacity,
@@ -15,6 +15,7 @@ import { formatCurrency } from '@/lib/invoice-calculator';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { cn } from '@/lib/utils';
+import { printInvoice } from '@/lib/print-service';
 
 export default function InvoiceDetailScreen() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function InvoiceDetailScreen() {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [printing, setPrinting] = useState(false);
 
   useEffect(() => {
     loadInvoice();
@@ -127,6 +129,25 @@ ${itemsText}
       Alert.alert('خطأ', 'حدث خطأ أثناء مشاركة الفاتورة');
     } finally {
       setSharing(false);
+    }
+  };
+
+  const handlePrintInvoice = async () => {
+    setPrinting(true);
+    try {
+      const templateMap: Record<string, 'classic' | 'professional' | 'modern'> = {
+        'template1': 'classic',
+        'template2': 'professional',
+        'template3': 'modern',
+      };
+      const templateType = templateMap[invoice?.templateId || 'template1'] || 'classic';
+      await printInvoice(invoice!, templateType);
+      Alert.alert('نجح', 'تم إرسال الفاتورة للطباعة');
+    } catch (error) {
+      console.error('Error printing:', error);
+      Alert.alert('خطأ', 'فشل في الطباعة');
+    } finally {
+      setPrinting(false);
     }
   };
 
@@ -243,26 +264,43 @@ ${itemsText}
           </View>
 
           {/* الأزرار */}
-          <View className="flex-row gap-2">
-            <TouchableOpacity
-              onPress={() => router.back()}
-              className="flex-1 bg-border rounded-lg py-3 items-center"
-            >
-              <Text className="text-foreground font-semibold">رجوع</Text>
-            </TouchableOpacity>
+          <View className="gap-2">
+            <View className="flex-row gap-2">
+              <TouchableOpacity
+                onPress={() => router.back()}
+                className="flex-1 bg-border rounded-lg py-3 items-center"
+              >
+                <Text className="text-foreground font-semibold">رجوع</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleShareWhatsApp}
+                disabled={sharing}
+                className={cn(
+                  'flex-1 bg-success rounded-lg py-3 items-center',
+                  sharing && 'opacity-70'
+                )}
+              >
+                {sharing ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <Text className="text-white font-semibold">مشاركة</Text>
+                )}
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
-              onPress={handleShareWhatsApp}
-              disabled={sharing}
+              onPress={handlePrintInvoice}
+              disabled={printing}
               className={cn(
-                'flex-1 bg-success rounded-lg py-3 items-center',
-                sharing && 'opacity-70'
+                'bg-primary rounded-lg py-3 items-center',
+                printing && 'opacity-70'
               )}
             >
-              {sharing ? (
+              {printing ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
-                <Text className="text-white font-semibold">مشاركة عبر WhatsApp</Text>
+                <Text className="text-white font-semibold">🖨️ طباعة الفاتورة</Text>
               )}
             </TouchableOpacity>
           </View>
