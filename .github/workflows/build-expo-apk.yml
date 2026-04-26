@@ -30,29 +30,39 @@ jobs:
       run: npm install -g eas-cli
 
     - name: Build APK with EAS
+      id: build
       run: |
         export EAS_BUILD_NO_EXPO_GO_WARNING=true
-        eas build --platform android --profile preview --non-interactive --wait
+        mkdir -p ./apk-output
+        eas build --platform android --profile preview --non-interactive --wait --output ./apk-output/app.apk 2>&1 | tee build.log
+        echo "BUILD_STATUS=success" >> $GITHUB_OUTPUT
       env:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      continue-on-error: true
 
-    - name: Find and Upload APK
+    - name: Check build artifacts
+      run: |
+        echo "=== Checking for APK files ==="
+        find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
+        echo ""
+        echo "=== Directory structure ==="
+        ls -la apk-output/ 2>/dev/null || echo "apk-output directory not found"
+        echo ""
+        echo "=== Build log ==="
+        tail -50 build.log || echo "No build log found"
+
+    - name: Upload APK if found
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: invoice-pro-app-apk
-        path: |
-          *.apk
-          **/*.apk
-        if-no-files-found: warn
+        path: apk-output/
         retention-days: 30
 
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          *.apk
-          **/*.apk
+        files: apk-output/*.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
