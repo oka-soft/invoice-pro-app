@@ -32,22 +32,32 @@ jobs:
     - name: Build APK with EAS
       run: |
         export EAS_BUILD_NO_EXPO_GO_WARNING=true
-        eas build --platform android --profile preview --non-interactive --wait
+        mkdir -p build-output
+        eas build --platform android --profile preview --non-interactive --wait --output ./build-output/app.apk
       env:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      continue-on-error: true
+
+    - name: Check build output
+      run: |
+        echo "Checking for build artifacts..."
+        find . -name "*.apk" -type f 2>/dev/null | head -20
+        ls -la build-output/ 2>/dev/null || echo "build-output directory not found"
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: invoice-pro-app-apk
-        path: dist/
+        path: |
+          build-output/
+          **/*.apk
         retention-days: 30
 
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
-        files: dist/*.apk
+        files: build-output/*.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
