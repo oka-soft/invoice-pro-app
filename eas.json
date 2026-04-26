@@ -19,13 +19,5 @@
       },
       "distribution": "internal"
     }
-  },
-  "submit": {
-    "production": {
-      "android": {
-        "serviceAccount": "~/.android/service-account.json",
-        "track": "internal"
-      }
-    }
   }
 }
